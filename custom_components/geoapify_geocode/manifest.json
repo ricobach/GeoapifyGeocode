@@ -1,0 +1,12 @@
+{
+  "domain": "geoapify_geocode",
+  "name": "GeoapifyGeocode",
+  "codeowners": ["@ricobach"],
+  "config_flow": true,
+  "documentation": "https://github.com/ricobach/GeoapifyGeocode",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ricobach/GeoapifyGeocode/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

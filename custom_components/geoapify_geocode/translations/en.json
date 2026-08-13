@@ -1,0 +1,27 @@
+{
+  "title": "GeoapifyGeocode",
+  "config": {
+    "step": {
+      "user": {
+        "title": "GeoapifyGeocode",
+        "description": "Enter your Geoapify API key and choose one or more person/device_tracker entities.",
+        "data": {
+          "api_key": "API key",
+          "targets": "Tracked entities"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "scan_interval": "Update interval (seconds)",
+          "min_distance_m": "Minimum movement before calling API (meters)",
+          "targets": "Tracked entities"
+        }
+      }
+    }
+  }
+}
