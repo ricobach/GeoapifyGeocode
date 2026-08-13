@@ -94,6 +94,18 @@ class GeoapifyGeocodeSensor(CoordinatorEntity[GeoapifyCoordinator], SensorEntity
         return data.get(self._source)
 
     @property
+    def entity_picture(self) -> str | None:
+        """Return the current picture from the tracked source entity."""
+        if not self.hass:
+            return None
+
+        state = self.hass.states.get(self._source)
+        if state is None:
+            return None
+
+        return state.attributes.get("entity_picture")
+
+    @property
     def native_value(self) -> str | None:
         """Return the formatted reverse-geocoded address."""
         result = self._result
