@@ -2,13 +2,20 @@
 
 A Home Assistant custom integration that reverse-geocodes selected `person` or `device_tracker` entities using the Geoapify Reverse Geocoding API.
 
-For each selected entity, the integration creates a sensor whose state is the formatted address returned by Geoapify. Additional attributes include country, timezone, source entity, latitude, longitude, and the raw Geoapify properties.
+For each selected entity, the integration creates a sensor whose state is the formatted address returned by Geoapify.
 
-## Requirements
+## Features
 
-- Home Assistant
-- A Geoapify API key
-- One or more entities exposing `latitude` and `longitude` attributes
+- UI configuration with Geoapify API-key validation
+- Reauthentication when an API key is rejected
+- Manual API-key reconfiguration
+- Select `person` and `device_tracker` entities to geocode
+- Configurable polling interval
+- Movement threshold to reduce API requests
+- Maximum result age so stationary locations are periodically refreshed
+- Concurrent requests for multiple moving targets
+- Rate-limit handling and cached fallback results
+- Selected address and timezone attributes without storing the full raw API response in Home Assistant's recorder
 
 ## Installation with HACS
 
@@ -22,37 +29,32 @@ For each selected entity, the integration creates a sensor whose state is the fo
 
 ## Configuration
 
-During setup, enter your Geoapify API key and select one or more entities to reverse geocode.
+During setup, enter your Geoapify API key and select one or more `person` or `device_tracker` entities.
 
-The integration can be reconfigured through its options:
+Options:
 
-- **Update interval**: how often target locations are checked.
-- **Minimum movement**: minimum distance a target must move before another Geoapify API request is made.
+- **Update interval**: how often target locations are checked. Default: 180 seconds.
+- **Minimum movement**: distance a target must move before another Geoapify request is made. Default: 100 metres.
+- **Maximum result age**: refresh even without enough movement once the cached result reaches this age. Default: 1800 seconds.
 - **Tracked entities**: entities to expose as reverse-geocoded sensors.
-
-Defaults:
-
-- Update interval: 180 seconds
-- Minimum movement: 100 metres
 
 ## Sensor data
 
-Each selected source entity gets a sensor named `<friendly name> Geocode`.
+Each selected source entity gets a `<friendly name> Geocode` sensor.
 
-The sensor state is the Geoapify formatted address. Attributes can include:
+The sensor state is the Geoapify formatted address. Depending on the result, attributes may include:
 
-- `country`
-- `timezone`
-- `timezone_name`
-- `source_entity`
-- `source_friendly_name`
-- `lat`
-- `lon`
-- `raw_properties`
+- country and country code
+- state, county and city
+- postcode, street and house number
+- result type and distance
+- timezone and timezone name
+- source entity and source friendly name
+- latitude and longitude
 
 ## API usage
 
-The integration avoids unnecessary Geoapify requests by caching the last successful result and only requesting a new reverse-geocode result when the source entity has moved by at least the configured minimum distance.
+Geoapify requests are made only when a target has moved far enough or when the cached result reaches the configured maximum age. The integration also keeps the last successful result as a fallback for transient Geoapify failures.
 
 ## Issues
 

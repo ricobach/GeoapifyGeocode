@@ -1,37 +1,58 @@
+"""The GeoapifyGeocode integration."""
+
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import CONF_API_KEY
+from .coordinator import GeoapifyClient, GeoapifyCoordinator
 
-PLATFORMS = ["sensor"]
+PLATFORMS = [Platform.SENSOR]
 
 
-async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload when options change so entities are recreated without HA restart."""
+@dataclass(slots=True)
+class GeoapifyRuntimeData:
+    """Runtime data for a GeoapifyGeocode config entry."""
+
+    client: GeoapifyClient
+    coordinator: GeoapifyCoordinator
+
+
+type GeoapifyConfigEntry = ConfigEntry[GeoapifyRuntimeData]
+
+
+async def _async_reload_entry(
+    hass: HomeAssistant, entry: GeoapifyConfigEntry
+) -> None:
+    """Reload when options change."""
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: GeoapifyConfigEntry
+) -> bool:
     """Set up GeoapifyGeocode from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
+    client = GeoapifyClient(hass, entry.data[CONF_API_KEY])
+    coordinator = GeoapifyCoordinator(hass, entry, client)
 
-    # Listen for option changes (targets, scan_interval, min_distance_m)
-    remove_listener = entry.add_update_listener(_async_reload_entry)
-    hass.data[DOMAIN][entry.entry_id] = {"remove_listener": remove_listener}
+    await coordinator.async_config_entry_first_refresh()
+
+    entry.runtime_data = GeoapifyRuntimeData(
+        client=client,
+        coordinator=coordinator,
+    )
+    entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload the config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    # Remove listener
-    data = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-    if data and "remove_listener" in data:
-        data["remove_listener"]()
-
-    return unload_ok
+async def async_unload_entry(
+    hass: HomeAssistant, entry: GeoapifyConfigEntry
+) -> bool:
+    """Unload a GeoapifyGeocode config entry."""
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
