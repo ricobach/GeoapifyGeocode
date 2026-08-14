@@ -3,10 +3,10 @@
   "name": "GeoapifyGeocode",
   "codeowners": ["@ricobach"],
   "config_flow": true,
-  "documentation": "https://github.com/ricobach/GeoapifyGeocode",
+  "documentation": "https://github.com/ricobach/HA-GeoapifyGeocode",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/ricobach/GeoapifyGeocode/issues",
+  "issue_tracker": "https://github.com/ricobach/HA-GeoapifyGeocode/issues",
   "requirements": [],
-  "version": "1.1.1"
+  "version": "1.1.2"
 }
