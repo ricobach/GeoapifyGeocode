@@ -14,10 +14,22 @@ from .const import (
     CONF_API_KEY,
     CONF_MAX_AGE,
     CONF_MIN_DISTANCE_M,
+    CONF_MOVEMENT_COMPARISON_AGE,
+    CONF_MOVEMENT_DEFAULT_ACCURACY,
+    CONF_MOVEMENT_HISTORY_WINDOW,
+    CONF_MOVEMENT_MIN_DISTANCE_M,
+    CONF_MOVEMENT_MIN_REFERENCE_AGE,
+    CONF_MOVEMENT_STATIONARY_TIMEOUT,
     CONF_SCAN_INTERVAL,
     CONF_TARGETS,
     DEFAULT_MAX_AGE,
     DEFAULT_MIN_DISTANCE_M,
+    DEFAULT_MOVEMENT_COMPARISON_AGE,
+    DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
+    DEFAULT_MOVEMENT_HISTORY_WINDOW,
+    DEFAULT_MOVEMENT_MIN_DISTANCE_M,
+    DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
+    DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
@@ -34,7 +46,7 @@ class GeoapifyGeocodeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for GeoapifyGeocode."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     async def _async_validate_api_key(self, api_key: str) -> str | None:
         """Return a config-flow error key, or None when validation succeeds."""
@@ -79,6 +91,12 @@ class GeoapifyGeocodeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
                         CONF_MIN_DISTANCE_M: DEFAULT_MIN_DISTANCE_M,
                         CONF_MAX_AGE: DEFAULT_MAX_AGE,
+                        CONF_MOVEMENT_HISTORY_WINDOW: DEFAULT_MOVEMENT_HISTORY_WINDOW,
+                        CONF_MOVEMENT_COMPARISON_AGE: DEFAULT_MOVEMENT_COMPARISON_AGE,
+                        CONF_MOVEMENT_MIN_REFERENCE_AGE: DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
+                        CONF_MOVEMENT_MIN_DISTANCE_M: DEFAULT_MOVEMENT_MIN_DISTANCE_M,
+                        CONF_MOVEMENT_DEFAULT_ACCURACY: DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
+                        CONF_MOVEMENT_STATIONARY_TIMEOUT: DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
                     },
                 )
             errors["base"] = error
@@ -206,6 +224,60 @@ class GeoapifyGeocodeOptionsFlow(config_entries.OptionsFlow):
                             )
                         ),
                     ): vol.All(int, vol.Range(min=60, max=86400)),
+                    vol.Optional(
+                        CONF_MOVEMENT_HISTORY_WINDOW,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_HISTORY_WINDOW,
+                                DEFAULT_MOVEMENT_HISTORY_WINDOW,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=120, max=3600)),
+                    vol.Optional(
+                        CONF_MOVEMENT_COMPARISON_AGE,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_COMPARISON_AGE,
+                                DEFAULT_MOVEMENT_COMPARISON_AGE,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=60, max=1800)),
+                    vol.Optional(
+                        CONF_MOVEMENT_MIN_REFERENCE_AGE,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_MIN_REFERENCE_AGE,
+                                DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=30, max=600)),
+                    vol.Optional(
+                        CONF_MOVEMENT_MIN_DISTANCE_M,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_MIN_DISTANCE_M,
+                                DEFAULT_MOVEMENT_MIN_DISTANCE_M,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=0, max=1000)),
+                    vol.Optional(
+                        CONF_MOVEMENT_DEFAULT_ACCURACY,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_DEFAULT_ACCURACY,
+                                DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=1, max=500)),
+                    vol.Optional(
+                        CONF_MOVEMENT_STATIONARY_TIMEOUT,
+                        default=int(
+                            self._config_entry.options.get(
+                                CONF_MOVEMENT_STATIONARY_TIMEOUT,
+                                DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
+                            )
+                        ),
+                    ): vol.All(int, vol.Range(min=0, max=900)),
                     vol.Optional(
                         CONF_TARGETS,
                         default=current_targets,
