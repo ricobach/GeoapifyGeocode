@@ -40,10 +40,17 @@
     "step": {
       "init": {
         "title": "GeoapifyGeocode options",
+        "description": "Configure reverse geocoding and GPS movement detection. Movement history is kept in memory and restored from Recorder after restart.",
         "data": {
-          "scan_interval": "Update interval (seconds)",
-          "min_distance_m": "Minimum movement before calling the API (metres)",
-          "max_age": "Maximum result age before refreshing (seconds)",
+          "scan_interval": "Geocode update interval (seconds)",
+          "min_distance_m": "Minimum movement before calling Geoapify (metres)",
+          "max_age": "Maximum geocode result age (seconds)",
+          "movement_history_window": "Movement history window (seconds)",
+          "movement_comparison_age": "Movement comparison target age (seconds)",
+          "movement_min_reference_age": "Minimum movement reference age (seconds)",
+          "movement_min_distance_m": "Minimum meaningful GPS displacement (metres)",
+          "movement_default_accuracy_m": "Fallback GPS accuracy when unavailable (metres)",
+          "movement_stationary_timeout": "Moving-state hold time after meaningful movement (seconds)",
           "targets": "Tracked entities"
         }
       }
@@ -53,6 +60,11 @@
     "sensor": {
       "geocode": {
         "name": "{source} Geocode"
+      }
+    },
+    "binary_sensor": {
+      "moving": {
+        "name": "{source} Moving"
       }
     }
   }
