@@ -155,14 +155,23 @@ class GPSHistory:
             key=lambda item: abs(item[0] - self.comparison_age),
         )
 
-        displacement_m = float(
-            location_util.distance(
-                current.latitude,
-                current.longitude,
-                reference.latitude,
-                reference.longitude,
-            )
+        displacement_m = location_util.distance(
+            current.latitude,
+            current.longitude,
+            reference.latitude,
+            reference.longitude,
         )
+        if displacement_m is None:
+            return MovementEvaluation(
+                None,
+                current,
+                reference,
+                reference_age,
+                None,
+                None,
+                len(self.samples),
+                self.last_meaningful_movement,
+            )
 
         current_accuracy = (
             current.accuracy if current.accuracy is not None else self.default_accuracy
