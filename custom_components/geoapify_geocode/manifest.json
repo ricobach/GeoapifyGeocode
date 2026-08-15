@@ -7,6 +7,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ricobach/HA-GeoapifyGeocode/issues",
+  "after_dependencies": ["recorder"],
   "requirements": [],
   "version": "1.2.0"
 }
