@@ -10,8 +10,9 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONF_API_KEY
 from .coordinator import GeoapifyClient, GeoapifyCoordinator
+from .movement import MovementCoordinator
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 
 @dataclass(slots=True)
@@ -20,6 +21,7 @@ class GeoapifyRuntimeData:
 
     client: GeoapifyClient
     coordinator: GeoapifyCoordinator
+    movement_coordinator: MovementCoordinator
 
 
 type GeoapifyConfigEntry = ConfigEntry[GeoapifyRuntimeData]
@@ -38,14 +40,18 @@ async def async_setup_entry(
     """Set up GeoapifyGeocode from a config entry."""
     client = GeoapifyClient(hass, entry.data[CONF_API_KEY])
     coordinator = GeoapifyCoordinator(hass, entry, client)
+    movement_coordinator = MovementCoordinator(hass, entry)
 
     await coordinator.async_config_entry_first_refresh()
+    await movement_coordinator.async_initialize()
 
     entry.runtime_data = GeoapifyRuntimeData(
         client=client,
         coordinator=coordinator,
+        movement_coordinator=movement_coordinator,
     )
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
+    entry.async_on_unload(movement_coordinator.async_start())
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
