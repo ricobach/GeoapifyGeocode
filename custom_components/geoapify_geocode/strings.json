@@ -38,6 +38,11 @@
   "config_subentries": {
     "tracked_entity": {
       "title": "Tracked person or device",
+      "entry_type": "Tracked person or device",
+      "initiate_flow": {
+        "user": "Add tracked person or device",
+        "reconfigure": "Configure tracked person or device"
+      },
       "step": {
         "user": {
           "title": "Add tracked person or device",
