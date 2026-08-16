@@ -24,7 +24,7 @@ from .const import (
     CONF_MOVEMENT_MIN_DISTANCE_M,
     CONF_MOVEMENT_MIN_REFERENCE_AGE,
     CONF_MOVEMENT_STATIONARY_TIMEOUT,
-    CONF_TARGETS,
+    CONF_SOURCE_ENTITY,
     DEFAULT_MOVEMENT_COMPARISON_AGE,
     DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
     DEFAULT_MOVEMENT_HISTORY_WINDOW,
@@ -32,6 +32,7 @@ from .const import (
     DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
     DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
     DOMAIN,
+    SUBENTRY_TYPE_TRACKED_ENTITY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -182,8 +183,6 @@ class GPSHistory:
             else self.default_accuracy
         )
 
-        # Treat the reported accuracies as uncertainty radii. Requiring movement
-        # beyond their sum is deliberately conservative and suppresses GPS drift.
         effective_threshold_m = max(
             self.min_distance_m,
             current_accuracy + reference_accuracy,
@@ -254,54 +253,59 @@ class MovementCoordinator(DataUpdateCoordinator[dict[str, MovementEvaluation]]):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.entry = entry
-        self.targets: list[str] = entry.options.get(
-            CONF_TARGETS, entry.data.get(CONF_TARGETS, [])
-        )
-
-        options = entry.options
-        history_window = int(
-            options.get(CONF_MOVEMENT_HISTORY_WINDOW, DEFAULT_MOVEMENT_HISTORY_WINDOW)
-        )
-        comparison_age = int(
-            options.get(CONF_MOVEMENT_COMPARISON_AGE, DEFAULT_MOVEMENT_COMPARISON_AGE)
-        )
-        min_reference_age = int(
-            options.get(
-                CONF_MOVEMENT_MIN_REFERENCE_AGE,
-                DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
-            )
-        )
-        min_distance_m = float(
-            options.get(
-                CONF_MOVEMENT_MIN_DISTANCE_M,
-                DEFAULT_MOVEMENT_MIN_DISTANCE_M,
-            )
-        )
-        default_accuracy = float(
-            options.get(
-                CONF_MOVEMENT_DEFAULT_ACCURACY,
-                DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
-            )
-        )
-        stationary_timeout = int(
-            options.get(
-                CONF_MOVEMENT_STATIONARY_TIMEOUT,
-                DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
-            )
-        )
-
-        self.histories = {
-            entity_id: GPSHistory(
-                history_window,
-                comparison_age,
-                min_reference_age,
-                min_distance_m,
-                default_accuracy,
-                stationary_timeout,
-            )
-            for entity_id in self.targets
+        self.target_configs = {
+            subentry.data[CONF_SOURCE_ENTITY]: subentry.data
+            for subentry in entry.subentries.values()
+            if subentry.subentry_type == SUBENTRY_TYPE_TRACKED_ENTITY
+            and CONF_SOURCE_ENTITY in subentry.data
         }
-        self._history_window = history_window
+        self.targets = list(self.target_configs)
+
+        self.histories: dict[str, GPSHistory] = {}
+        for entity_id, config in self.target_configs.items():
+            self.histories[entity_id] = GPSHistory(
+                int(
+                    config.get(
+                        CONF_MOVEMENT_HISTORY_WINDOW,
+                        DEFAULT_MOVEMENT_HISTORY_WINDOW,
+                    )
+                ),
+                int(
+                    config.get(
+                        CONF_MOVEMENT_COMPARISON_AGE,
+                        DEFAULT_MOVEMENT_COMPARISON_AGE,
+                    )
+                ),
+                int(
+                    config.get(
+                        CONF_MOVEMENT_MIN_REFERENCE_AGE,
+                        DEFAULT_MOVEMENT_MIN_REFERENCE_AGE,
+                    )
+                ),
+                float(
+                    config.get(
+                        CONF_MOVEMENT_MIN_DISTANCE_M,
+                        DEFAULT_MOVEMENT_MIN_DISTANCE_M,
+                    )
+                ),
+                float(
+                    config.get(
+                        CONF_MOVEMENT_DEFAULT_ACCURACY,
+                        DEFAULT_MOVEMENT_DEFAULT_ACCURACY,
+                    )
+                ),
+                int(
+                    config.get(
+                        CONF_MOVEMENT_STATIONARY_TIMEOUT,
+                        DEFAULT_MOVEMENT_STATIONARY_TIMEOUT,
+                    )
+                ),
+            )
+
+        self._history_window = max(
+            (gps_history.history_window for gps_history in self.histories.values()),
+            default=DEFAULT_MOVEMENT_HISTORY_WINDOW,
+        )
         self._last_publish = 0.0
 
         super().__init__(
