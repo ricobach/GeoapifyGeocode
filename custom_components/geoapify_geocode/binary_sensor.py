@@ -10,40 +10,44 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import GeoapifyConfigEntry
-from .const import CONF_TARGETS
+from .const import (
+    CONF_SOURCE_ENTITY,
+    DOMAIN,
+    SUBENTRY_TYPE_TRACKED_ENTITY,
+)
 from .movement import MovementCoordinator, MovementEvaluation
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: GeoapifyConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up GPS movement binary sensors."""
+    """Set up one movement binary sensor for each tracked-entity subentry."""
     coordinator = entry.runtime_data.movement_coordinator
-    targets = entry.options.get(CONF_TARGETS, entry.data.get(CONF_TARGETS, []))
 
-    async_add_entities(
-        GeoapifyMovementBinarySensor(
-            coordinator,
-            entry,
-            entity_id,
-            _friendly_name(hass, entity_id),
+    for subentry_id, subentry in entry.subentries.items():
+        if subentry.subentry_type != SUBENTRY_TYPE_TRACKED_ENTITY:
+            continue
+        source_entity = subentry.data.get(CONF_SOURCE_ENTITY)
+        if not source_entity:
+            continue
+        async_add_entities(
+            [
+                GeoapifyMovementBinarySensor(
+                    coordinator,
+                    entry,
+                    source_entity,
+                    subentry.title,
+                )
+            ],
+            config_subentry_id=subentry_id,
         )
-        for entity_id in targets
-    )
-
-
-def _friendly_name(hass: HomeAssistant, entity_id: str) -> str:
-    """Return the source entity's current friendly name."""
-    state = hass.states.get(entity_id)
-    if state is None:
-        return entity_id
-    return state.attributes.get("friendly_name", entity_id)
 
 
 class GeoapifyMovementBinarySensor(
@@ -60,7 +64,7 @@ class GeoapifyMovementBinarySensor(
         coordinator: MovementCoordinator,
         entry: GeoapifyConfigEntry,
         source_entity: str,
-        friendly_name: str,
+        device_name: str,
     ) -> None:
         super().__init__(coordinator, context=source_entity)
         self._source = source_entity
@@ -68,7 +72,12 @@ class GeoapifyMovementBinarySensor(
         raw = f"{entry.entry_id}:{source_entity}".encode()
         uid = hashlib.sha1(raw).hexdigest()
         self._attr_unique_id = f"{entry.entry_id}_{uid}_moving"
-        self._attr_translation_placeholders = {"source": friendly_name}
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{entry.entry_id}:{source_entity}")},
+            manufacturer="Geoapify",
+            model="Tracked location",
+            name=device_name,
+        )
 
     @property
     def _evaluation(self) -> MovementEvaluation | None:
