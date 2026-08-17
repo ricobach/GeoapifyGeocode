@@ -4,10 +4,9 @@
     "step": {
       "user": {
         "title": "GeoapifyGeocode",
-        "description": "Enter your Geoapify API key and choose one or more person or device tracker entities.",
+        "description": "Enter the Geoapify API key used by all tracked entities.",
         "data": {
-          "api_key": "API key",
-          "targets": "Tracked entities"
+          "api_key": "API key"
         }
       },
       "reauth_confirm": {
@@ -19,7 +18,7 @@
       },
       "reconfigure": {
         "title": "Update Geoapify API key",
-        "description": "Enter the Geoapify API key to use for this integration.",
+        "description": "Enter the shared Geoapify API key to use for this integration.",
         "data": {
           "api_key": "API key"
         }
@@ -36,23 +35,44 @@
       "reconfigure_successful": "Configuration was updated successfully."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "GeoapifyGeocode options",
-        "data": {
-          "scan_interval": "Update interval (seconds)",
-          "min_distance_m": "Minimum movement before calling the API (metres)",
-          "max_age": "Maximum result age before refreshing (seconds)",
-          "targets": "Tracked entities"
+  "config_subentries": {
+    "tracked_entity": {
+      "title": "Tracked person or device",
+      "entry_type": "Tracked person or device",
+      "initiate_flow": {
+        "user": "Add tracked person or device",
+        "reconfigure": "Configure tracked person or device"
+      },
+      "step": {
+        "user": {
+          "title": "Add tracked person or device",
+          "description": "Choose a person or device tracker. A GeoapifyGeocode device will be created for it with its geocode entity.",
+          "data": {
+            "source_entity": "Person or device tracker",
+            "scan_interval": "Geocode update interval (seconds)",
+            "min_distance_m": "Minimum movement before calling Geoapify (metres)",
+            "max_age": "Maximum geocode result age before refreshing (seconds)"
+          }
+        },
+        "reconfigure": {
+          "title": "Update {source}",
+          "description": "Adjust geocoding settings for {source}.",
+          "data": {
+            "scan_interval": "Geocode update interval (seconds)",
+            "min_distance_m": "Minimum movement before calling Geoapify (metres)",
+            "max_age": "Maximum geocode result age before refreshing (seconds)"
+          }
         }
+      },
+      "abort": {
+        "already_configured": "This person or device tracker is already configured."
       }
     }
   },
   "entity": {
     "sensor": {
       "geocode": {
-        "name": "{source} Geocode"
+        "name": "Geocode"
       }
     }
   }

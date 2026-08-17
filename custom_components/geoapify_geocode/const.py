@@ -1,8 +1,11 @@
 """Constants for the GeoapifyGeocode integration."""
 
 DOMAIN = "geoapify_geocode"
+SUBENTRY_TYPE_TRACKED_ENTITY = "tracked_entity"
 
 CONF_API_KEY = "api_key"
+CONF_SOURCE_ENTITY = "source_entity"
+# Legacy key retained only for migration from pre-subentry configurations.
 CONF_TARGETS = "targets"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_MIN_DISTANCE_M = "min_distance_m"
