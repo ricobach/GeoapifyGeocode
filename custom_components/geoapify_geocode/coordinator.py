@@ -22,11 +22,12 @@ from .const import (
     CONF_MAX_AGE,
     CONF_MIN_DISTANCE_M,
     CONF_SCAN_INTERVAL,
-    CONF_TARGETS,
+    CONF_SOURCE_ENTITY,
     DEFAULT_MAX_AGE,
     DEFAULT_MIN_DISTANCE_M,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    SUBENTRY_TYPE_TRACKED_ENTITY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -176,6 +177,20 @@ class TargetStateCache:
         self.last_latlon: dict[str, tuple[float, float]] = {}
         self.last_result: dict[str, GeoapifyResult] = {}
         self.last_updated: dict[str, float] = {}
+        self.last_checked: dict[str, float] = {}
+
+    def should_check(
+        self, entity_id: str, scan_interval: int, *, now: float | None = None
+    ) -> bool:
+        """Return whether this target's own polling interval has elapsed."""
+        if entity_id not in self.last_checked:
+            return True
+        now = time.monotonic() if now is None else now
+        return now - self.last_checked[entity_id] >= scan_interval
+
+    def mark_checked(self, entity_id: str, *, now: float | None = None) -> None:
+        """Record that the source entity was evaluated."""
+        self.last_checked[entity_id] = time.monotonic() if now is None else now
 
     def should_update(
         self,
@@ -215,7 +230,7 @@ class TargetStateCache:
 
 
 class GeoapifyCoordinator(DataUpdateCoordinator[dict[str, GeoapifyResult]]):
-    """Coordinate reverse-geocoding updates for all configured targets."""
+    """Coordinate reverse-geocoding updates for configured tracked subentries."""
 
     def __init__(
         self,
@@ -226,16 +241,22 @@ class GeoapifyCoordinator(DataUpdateCoordinator[dict[str, GeoapifyResult]]):
         self.entry = entry
         self.client = client
         self.cache = TargetStateCache()
-        self.targets = entry.options.get(CONF_TARGETS, entry.data.get(CONF_TARGETS, []))
-        self.min_distance_m = int(
-            entry.options.get(CONF_MIN_DISTANCE_M, DEFAULT_MIN_DISTANCE_M)
-        )
-        self.max_age = int(entry.options.get(CONF_MAX_AGE, DEFAULT_MAX_AGE))
+        self.target_configs = {
+            subentry.data[CONF_SOURCE_ENTITY]: subentry.data
+            for subentry in entry.subentries.values()
+            if subentry.subentry_type == SUBENTRY_TYPE_TRACKED_ENTITY
+            and CONF_SOURCE_ENTITY in subentry.data
+        }
+        self.targets = list(self.target_configs)
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
         self._rate_limited_until = 0.0
 
-        scan_interval = int(
-            entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        poll_interval = min(
+            (
+                int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+                for config in self.target_configs.values()
+            ),
+            default=DEFAULT_SCAN_INTERVAL,
         )
 
         super().__init__(
@@ -243,13 +264,20 @@ class GeoapifyCoordinator(DataUpdateCoordinator[dict[str, GeoapifyResult]]):
             _LOGGER,
             config_entry=entry,
             name=DOMAIN,
-            update_interval=timedelta(seconds=scan_interval),
+            update_interval=timedelta(seconds=poll_interval),
         )
 
     async def _async_update_target(
         self, entity_id: str
     ) -> GeoapifyResult | None:
         """Update one target, returning cached data where appropriate."""
+        config = self.target_configs[entity_id]
+        scan_interval = int(config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+        now = time.monotonic()
+        if not self.cache.should_check(entity_id, scan_interval, now=now):
+            return self.cache.last_result.get(entity_id)
+        self.cache.mark_checked(entity_id, now=now)
+
         state = self.hass.states.get(entity_id)
         if state is None:
             _LOGGER.debug("Target entity missing: %s", entity_id)
@@ -273,12 +301,14 @@ class GeoapifyCoordinator(DataUpdateCoordinator[dict[str, GeoapifyResult]]):
             )
             return self.cache.last_result.get(entity_id)
 
+        min_distance_m = int(config.get(CONF_MIN_DISTANCE_M, DEFAULT_MIN_DISTANCE_M))
+        max_age = int(config.get(CONF_MAX_AGE, DEFAULT_MAX_AGE))
         if not self.cache.should_update(
             entity_id,
             lat_f,
             lon_f,
-            self.min_distance_m,
-            self.max_age,
+            min_distance_m,
+            max_age,
         ):
             return self.cache.last_result.get(entity_id)
 
